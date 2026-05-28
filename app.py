@@ -2,9 +2,10 @@ import streamlit as st
 import numpy as np
 from PIL import Image
 import cv2
+from filters import *
 
 
-st.title("PixelLab AI")
+st.title("PixelLab")
 
 uploaded_file = st.file_uploader(
     "Upload an image",
@@ -12,119 +13,19 @@ uploaded_file = st.file_uploader(
 )
 
 if uploaded_file is not None:
+    try:
+        image = Image.open(uploaded_file)
+    except Exception as e:
+        print("error loading image")
 
-    image = Image.open(uploaded_file)
-
-    st.image(image, caption="Uploaded Image")
-
+    
     image_array = np.array(image)
     #shape of image
     st.write("Image Shape:", image_array.shape)
 
     #grayscale image of the og image
 
-    def gray_image():
-        gray=cv2.cvtColor(image_array,cv2.COLOR_RGB2GRAY)
-        return gray
     
-    def blur_image():
-        blur=cv2.GaussianBlur(image_array,(51,51),0)
-        return blur
-
-    def invert_image():
-        invert=255-image_array
-        return invert
-    
-    def brightness_filter(value=30):
-        
-        bright = np.clip(image_array.astype(np.int16) + value, 0, 255)
-
-        return bright.astype(np.uint8)
-    
-    def contrast_filter(alpha=1.5):
-        contrast = np.clip(image_array.astype(np.float32) * alpha, 0, 255)
-
-        return contrast.astype(np.uint8)
-    
-    def edge_detection():
-        gray=cv2.cvtColor(image_array,cv2.COLOR_RGB2GRAY)
-        edges=cv2.Canny(gray,100,200)
-        return edges
-    
-    def sharpen_filter():
-
-        kernel = np.array([
-        [0, -1, 0],
-        [-1, 5, -1],
-        [0, -1, 0]
-        ])
-
-        sharpen = cv2.filter2D(image_array, -1, kernel)
-
-        return sharpen
-    def sepia_filter():
-
-        kernel = np.array([
-        [0.272, 0.534, 0.131],
-        [0.349, 0.686, 0.168],
-        [0.393, 0.769, 0.189]
-        ])
-
-        sepia = cv2.transform(image_array, kernel)
-
-        sepia = np.clip(sepia, 0, 255)
-
-        return sepia.astype(np.uint8)
-
-
-# 9. Black & White Threshold Filter
-    def threshold_filter():
-
-        gray = cv2.cvtColor(image_array, cv2.COLOR_RGB2GRAY)
-
-        _, threshold = cv2.threshold(
-        gray,
-        127,
-        255,
-        cv2.THRESH_BINARY
-        )
-
-        return threshold
-
-
-# 10. Red Channel Filter
-    def red_filter():
-
-        red = image_array.copy()
-
-        red[:, :, 1] = 0
-        red[:, :, 2] = 0
-
-        return red
-
-
-# 11. Green Channel Filter
-    def green_filter():
-
-        green = image_array.copy()
-
-        green[:, :, 0] = 0
-        green[:, :, 2] = 0
-
-        return green
-
-
-# 12. Blue Channel Filter
-    def blue_filter():
-
-        blue = image_array.copy()
-
-        blue[:, :, 0] = 0
-        blue[:, :, 1] = 0
-
-        return blue
-    
-
     #st.image(gray_image(), caption="Grayscale filter")
     #st.image(invert_image(),caption="invert filter")
     #st.image(blur_image(),caption="blur filter")
@@ -139,7 +40,7 @@ if uploaded_file is not None:
     #st.image(green_filter(),caption="green filter")
      
     #dropdown of selected filter]
-    selected_filter=st.selectbox("choose filter",[
+    selected_filter=st.sidebar.selectbox("choose filter",[
         "Original",
         "Grayscale",
         "Invert",
@@ -161,50 +62,88 @@ if uploaded_file is not None:
 
     elif selected_filter == "Grayscale":
 
-        processed_image = gray_image()
+        processed_image = gray_image(image_array)
 
     elif selected_filter == "Invert":
 
-        processed_image = invert_image()
+        processed_image = invert_image(image_array)
 
     elif selected_filter == "Blur":
+        blur_value=st.sidebar.slider("Blur strength",1,101,15,step=2)
 
-        processed_image = blur_image()
+        processed_image = blur_image(image_array,blur_value)
 
     elif selected_filter == "Brightness":
+        brightness_value=st.sidebar.slider("Brightness",-100,100,0)
 
-        processed_image = brightness_filter()
+        processed_image = brightness_filter(image_array,brightness_value)
 
     elif selected_filter == "Contrast":
+        contrast_value=st.sidebar.slider("Contrast level",0.1,3.0,1.0,step=0.1)
 
-        processed_image = contrast_filter()
+        processed_image = contrast_filter(image_array,contrast_value)
 
     elif selected_filter == "Edge Detection":
+        low_threshold=st.sidebar.slider("low threshold",0,255,100)
+        high_threshold=st.sidebar.slider("high threshold",0,255,200)
 
-        processed_image = edge_detection()
+        processed_image = edge_detection(image_array,low_threshold,high_threshold)
 
     elif selected_filter == "Sharpen":
+        sharpness_strength=st.sidebar.slider("Sharpness Strength",0.0,2.0,0.5,step=0.1)
 
-        processed_image = sharpen_filter()
+        processed_image = sharpen_filter(image_array,sharpness_strength)
 
     elif selected_filter == "Sepia":
+        sepia_strength=st.sidebar.slider("sepia strength",0.0,1.0,0.5,step=0.1)
 
-        processed_image = sepia_filter()
+        processed_image = sepia_filter(image_array,sepia_strength)
 
     elif selected_filter == "Threshold":
+        threshold_value=st.sidebar.slider("threshold slider",0,255,127)
 
-        processed_image = threshold_filter()
+        processed_image = threshold_filter(image_array,threshold_value)
 
     elif selected_filter == "Red Filter":
-
-        processed_image = red_filter()
+        red_intensity=st.sidebar.slider("red value",1.0,3.0,1.5,step=0.1)
+        processed_image = red_filter(image_array,red_intensity)
 
     elif selected_filter == "Green Filter":
+        green_intensity=st.sidebar.slider("green value",1.0,3.0,1.5,step=0.1)
+        processed_image = green_filter(image_array,green_intensity)
 
-        processed_image = green_filter()
+        
 
     elif selected_filter == "Blue Filter":
+        blue_intensity=st.sidebar.slider("blue value",1.0,3.0,1.5,step=0.1)
 
-        processed_image = blue_filter()
+        processed_image = blue_filter(image_array,blue_intensity)
 
-    st.image(processed_image,caption=f"{selected_filter} filter",use_container_width=True)
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.image(
+            image_array,
+            caption="Original Image",
+            use_container_width=True
+        )
+
+    with col2:
+        st.image(
+            processed_image,
+            caption=f"{selected_filter} Filter",
+            use_container_width=True
+        )     
+
+    result_image = Image.fromarray(processed_image)
+
+    result_image.save("output/filtered_image.png")
+
+    with open("output/filtered_image.png", "rb") as file:
+
+        st.download_button(
+            label="Download Image",
+            data=file,
+            file_name="filtered_image.png",
+            mime="image/png"
+        )
