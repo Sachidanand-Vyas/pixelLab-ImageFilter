@@ -3,6 +3,9 @@ import numpy as np
 from PIL import Image
 import cv2
 from filters import *
+from rembg import remove
+from io import BytesIO
+
 
 
 st.title("PixelLab")
@@ -118,7 +121,11 @@ if uploaded_file is not None:
         blue_intensity=st.sidebar.slider("blue value",1.0,3.0,1.5,step=0.1)
 
         processed_image = blue_filter(image_array,blue_intensity)
+    remove_bg = st.sidebar.checkbox("Remove Background")
 
+    if remove_bg:
+        with st.spinner("Removing background..."):
+            processed_image = remove(processed_image)
     col1, col2 = st.columns(2)
 
     with col1:
@@ -135,15 +142,104 @@ if uploaded_file is not None:
             use_container_width=True
         )     
 
-    result_image = Image.fromarray(processed_image)
+        
 
-    result_image.save("output/filtered_image.png")
+    download_format = st.sidebar.selectbox(
+    "Download Format",
+    ["PNG", "JPG", "WEBP"]
+)
 
-    with open("output/filtered_image.png", "rb") as file:
+# Handle rembg output
+    if isinstance(processed_image, bytes):
+        result_image = Image.open(BytesIO(processed_image))
+    else:
+        result_image = Image.fromarray(processed_image)
 
-        st.download_button(
-            label="Download Image",
-            data=file,
-            file_name="filtered_image.png",
-            mime="image/png"
+# JPG doesn't support transparency
+    if download_format == "JPG":
+        if result_image.mode == "RGBA":
+            result_image = result_image.convert("RGB")
+
+    buffer = BytesIO()
+
+    save_format = download_format
+
+    if save_format == "JPG":
+        save_format = "JPEG"
+
+    result_image.save(
+        buffer,
+        format=save_format
+    )
+
+    mime_types = {
+        "PNG": "image/png",
+        "JPG": "image/jpeg",
+     "WEBP": "image/webp"
+    }
+
+    st.download_button(
+        label=f"Download {download_format}",
+        data=buffer.getvalue(),
+        file_name=f"filtered_image.{download_format.lower()}",
+        mime=mime_types[download_format]
+    )
+    
+    theme=st.sidebar.selectbox("Theme",["Dark","Light","Ocean","Purple"])
+    if theme == "Dark":
+
+        st.markdown(
+            """
+            <style>
+            .stApp {
+                background-color: #0E1117;
+                color: white;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
         )
+
+    elif theme == "Light":
+
+        st.markdown(
+            """
+            <style>
+            .stApp {
+                background-color: white;
+                color: black;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+
+    elif theme == "Ocean":
+
+        st.markdown(
+            """
+            <style>
+            .stApp {
+                background-color: #0F2027;
+                color: #A8DADC;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+
+    elif theme == "Purple":
+
+        st.markdown(
+            """
+            <style>
+            .stApp {
+                background-color: #2D1E2F;
+                color: #E0AAFF;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+    
+   
